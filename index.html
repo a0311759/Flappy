@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Fullscreen Canvas */
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(to top, #87CEFA, #00BFFF);
+        }
+
+        canvas {
+            display: block;
+            border: 2px solid #333;
+            background: #87CEFA;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Game Over Overlay */
+        #gameOverOverlay, #startOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 40px;
+            text-align: center;
+            padding-top: 150px;
+            z-index: 10;
+            display: none;
+        }
+
+        #gameOverMessage, #startMessage {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        /* Score Styles */
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15;
+            font-size: 30px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Retry Button */
+        #retryButton, #startButton {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #ff6347;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        #retryButton:hover, #startButton:hover {
+            background-color: #ff4500;
+        }
+
+        /* Responsiveness for smaller screens */
+        @media (max-width: 600px) {
+            #score {
+                font-size: 24px;
+            }
+
+            #gameOverMessage, #startMessage {
+                font-size: 36px;
+            }
+
+            #retryButton, #startButton {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+
+<!-- Score Display -->
+<div id="score">Score: 0</div>
+
+<!-- Start Game Overlay -->
+<div id="startOverlay">
+    <div id="startMessage">Welcome to Flappy Bird!</div>
+    <button id="startButton" onclick="startGame()">Start Game</button>
+</div>
+
+<!-- Game Over Overlay -->
+<div id="gameOverOverlay">
+    <div id="gameOverMessage">Game Over!</div>
+    <div id="finalScore">Final Score: 0</div>
+    <button id="retryButton" onclick="reset()">Retry</button>
+</div>
+
+<script>
+    // Initialize the canvas and context
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Variables
+    let birdY = canvas.height / 2;
+    let velocity = 0;
+    let gravity = 0.05;
+    let jump = -1.5;
+    let gap = 100;
+    let pipeWidth = 50;
+    let pipeSpeed = 1;
+    let pipeInterval = 150;
+    let pipes = [];
+    let score = 0;
+    let gameLoop;
+
+    // Functions
+    function drawBird() {
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(50, birdY, 30, 30);
+    }
+
+    function drawPipe(x, height) {
+        ctx.fillStyle = 'green';
+        ctx.fillRect(x, 0, pipeWidth, height); // Top pipe
+        ctx.fillRect(x, height + gap, pipeWidth, canvas.height - height - gap); // Bottom pipe
+    }
+
+    function checkCollision(pipe) {
+        if (50 + 30 > pipe.x && 50 < pipe.x + pipeWidth) {
+            if (birdY < pipe.height || birdY + 30 > pipe.height + gap) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function update() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        velocity += gravity;
+        birdY += velocity;
+
+        if (birdY <= 0 || birdY + 30 >= canvas.height) { 
+            gameOver(); 
+        }
+
+        drawBird();
+
+        pipes.forEach((pipe, index) => {
+            drawPipe(pipe.x, pipe.height);
+            pipe.x -= pipeSpeed;
+
+            if (checkCollision(pipe)) {
+                gameOver();
+            }
+
+            if (pipe.x + pipeWidth < 0) {
+                pipes.splice(index, 1);
+                score++;
+            }
+        });
+
+        document.getElementById('score').innerText = 'Score: ' + score;
+
+        if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - pipeInterval) {
+            let randomHeight = Math.floor(Math.random() * (canvas.height - gap));
+            pipes.push({ x: canvas.width, height: randomHeight });
+        }
+
+        gameLoop = requestAnimationFrame(update);
+    }
+
+    function gameOver() {
+        document.getElementById('gameOverOverlay').style.display = 'block';
+        document.getElementById('finalScore').innerText = 'Final Score: ' + score;
+
+        setTimeout(function() {
+            location.reload();
+        }, 2000);
+    }
+
+    function reset() {
+        document.getElementById('gameOverOverlay').style.display = 'none';
+        birdY = canvas.height / 2;
+        velocity = 0;
+        pipes = [];
+        score = 0;
+        document.getElementById('score').innerText = 'Score: ' + score;
+        update();
+    }
+
+    function startGame() {
+        document.getElementById('startOverlay').style.display = 'none';
+        update();
+    }
+
+    // Event listeners
+    canvas.addEventListener('click', function () {
+        velocity = jump;
+    });
+
+    // Show the start game overlay
+    document.getElementById('startOverlay').style.display = 'block';
+</script>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+</body>
+</html>
